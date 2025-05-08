@@ -98,7 +98,47 @@ server.tool(
   }
 );
 
+server.tool(
+  "updateTodo",
+  { oldTitle: z.string(), newTitle: z.string() },
+  async ({ oldTitle, newTitle }: { oldTitle: string, newTitle:string }) => {
+    const db = await getDb();
+    try {
+      const parameters = [oldTitle.toLowerCase(), newTitle];
+      const sqlStmt = 'UPDATE todos SET "title"= $2 WHERE LOWER(title) = $1;';
+      await db.query(sqlStmt, parameters);
+      return {
+        content:[{
+            type:'text',
+            text: `Todo updated: \n\n ${newTitle}`,
+        }]
+      }
+    } finally {
+      await db.release();
+    }
+  }
+);
 
+server.tool(
+  "updateCompletedStatus",
+  { title: z.string(), status: z.boolean() },
+  async ({ title, status }: { title:string, status: boolean }) => {
+    const db = await getDb();
+    try {
+      const parameters = [title.toLowerCase(), status];
+      const sqlStmt = 'UPDATE todos SET "is_completed"= $2 WHERE LOWER(title) = $1;';
+      await db.query(sqlStmt, parameters);
+      return {
+        content:[{
+            type:'text',
+            text: `Todo ${title} status updated: \n\n ${status}`,
+        }]
+      }
+    } finally {
+      await db.release();
+    }
+  }
+);
 
 async function main() {
   const transport = new StdioServerTransport();

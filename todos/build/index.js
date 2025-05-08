@@ -1,10 +1,6 @@
 "use strict";
 const { McpServer, ResourceTemplate, } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StdioServerTransport, } = require("@modelcontextprotocol/sdk/server/stdio.js");
-// import {
-//     ListResourcesRequestSchema,
-//     ReadResourceRequestSchema,
-// } from '@modelcontextprotocol/sdk/types.js';
 const { Pool } = require("pg");
 const { z } = require("zod");
 const server = new McpServer({
@@ -78,6 +74,61 @@ server.tool("createTodo", { title: z.string() }, async ({ title }) => {
         await db.release();
     }
 });
+server.tool("updateTodo", { oldTitle: z.string(), newTitle: z.string() }, async ({ oldTitle, newTitle }) => {
+    const db = await getDb();
+    try {
+        const parameters = [oldTitle.toLowerCase(), newTitle];
+        const sqlStmt = 'UPDATE todos SET "title"= $2 WHERE LOWER(title) = $1;';
+        await db.query(sqlStmt, parameters);
+        return {
+            content: [{
+                    type: 'text',
+                    text: `Todo updated: \n\n ${newTitle}`,
+                }]
+        };
+    }
+    finally {
+        await db.release();
+    }
+});
+server.tool("updateCompletedStatus", { title: z.string(), status: z.boolean() }, async ({ title, status }) => {
+    const db = await getDb();
+    try {
+        const parameters = [title.toLowerCase(), status];
+        const sqlStmt = 'UPDATE todos SET "is_completed"= $2 WHERE LOWER(title) = $1;';
+        await db.query(sqlStmt, parameters);
+        return {
+            content: [{
+                    type: 'text',
+                    text: `Todo ${title} status updated: \n\n ${status}`,
+                }]
+        };
+    }
+    finally {
+        await db.release();
+    }
+});
+// const updateTodo = async ({ title, status }: { title:string, status: boolean }) => {
+//     const db = await getDb();
+//     try {
+//       const parameters = [title.toLocaleLowerCase(), status];
+//       const sqlStmt = 'UPDATE todos SET "is_completed"= $2 WHERE LOWER(title) = $1;';
+//       console.log(sqlStmt, parameters);
+//       await db.query(sqlStmt, parameters);
+//       return {
+//         content:[{
+//             type:'text',
+//             text: `Todo ${title} status updated: \n\n ${status}`,
+//         }]
+//       }
+//     } finally {
+//       await db.release();
+//     }
+//   };
+// updateTodo({
+//   "title": "Watch Comedy show",
+//   "status": true
+// });
 async function main() {
     const transport = new StdioServerTransport();
     await server.connect(transport);
